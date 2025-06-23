@@ -46,7 +46,7 @@ def index():
         return Response(f"<pre style='color:red'>ERRO AO LER DO BANCO:\n{e}</pre>", mimetype="text/html")
 
     centro = [df.latitude.mean(), df.longitude.mean()]
-    m = folium.Map(location=centro, zoom_start=6, width="100%", height="100%", tiles="CartoDB positron")
+    m = folium.Map(location=centro, zoom_start=6, width="100%", height="100%",  tiles="OpenStreetMap")
 
     for _, r in df.iterrows():
         folium.Marker(
