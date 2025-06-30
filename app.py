@@ -51,7 +51,7 @@ def index():
     for _, r in df.iterrows():
         folium.Marker(
             [r.latitude, r.longitude],
-            popup=(f"<b>ID:</b> {r.A00_ID}<br><b>Cliente:</b> {r.A00_FANTASIA}<br><b>Área:</b> {r.AREA_DESC}"),
+            popup=(f"<b>ID:</b> {r.A00_ID}<br><b>Cliente:</b> {r.A00_FANTASIA}<br><b>Rota:</b> {r.AREA_DESC}"),
         ).add_to(m)
 
     folium.LayerControl(collapsed=False).add_to(m)
@@ -68,7 +68,7 @@ def index():
         </div>
         """
 
-    area_group  = make_filter_group("area-group", "Área", df["AREA_DESC"].unique())
+    area_group  = make_filter_group("area-group", "Rota", df["AREA_DESC"].unique())
     id_group    = make_filter_group("id-group", "ID", df["A00_ID"].astype(str).unique())
     name_group  = make_filter_group("name-group", "Cliente", df["A00_FANTASIA"].unique())
 

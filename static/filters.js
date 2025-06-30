@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (typeof raw !== "string") raw = raw.innerHTML || raw.textContent || "";
       const plain = String(raw).toLowerCase().replace(/\s+/g, '');
 
-      const okA = areas.length === 0 || areas.some(a => plain.includes('área:</b>' + a.replace(/\s+/g, '')));
+      const okA = areas.length === 0 || areas.some(a => plain.includes('rota:</b>' + a.replace(/\s+/g, '')));
       const okI = ids.length   === 0 || ids.some(i => plain.includes('id:</b>' + i));
       const okN = names.length === 0 || names.some(n => plain.includes('cliente:</b>' + n.replace(/\s+/g, '')));
 
