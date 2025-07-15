@@ -6,6 +6,7 @@ import urllib
 
 app = Flask(__name__)
 
+# Conexão ODBC com SQL Server
 odbc_str = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
     "SERVER=10.1.0.3\\SQLSTANDARD;"
@@ -16,27 +17,47 @@ odbc_str = (
 conn_str = "mssql+pyodbc:///?odbc_connect=" + urllib.parse.quote_plus(odbc_str)
 engine = create_engine(conn_str)
 
+# Consulta SQL com vendedor e supervisor
 SQL = """
 SELECT 
     c.A00_ID,
     c.A00_FANTASIA,
     c.A00_LAT        AS latitude,
     c.A00_LONG       AS longitude,
-    a.A14_DESC       AS AREA_DESC
+    ar.A14_DESC      AS AREA_DESC,
+    c.A00_ID_VEND    AS Vendedor,
+    v.A00_NOME       AS NOME_VENDEDOR,
+    s.A00_NOME       AS SUPERVISOR
 FROM A00 c
-INNER JOIN A14 a ON c.A00_ID_A14 = a.A14_ID
+INNER JOIN A14 ar ON c.A00_ID_A14 = ar.A14_ID
+LEFT  JOIN A00 v  ON c.A00_ID_VEND = v.A00_ID
+LEFT  JOIN A00 s  ON c.A00_ID_VEND_2 = s.A00_ID
 WHERE c.A00_STATUS = 1
   AND c.A00_EN_CL   = 1
-  AND a.A14_DESC IS NOT NULL
-  AND a.A14_DESC NOT IN (
-    '999 - L80-INDUSTRIA',
-    '700 - L81 - REMESSA VENDA',
-    '142 - L82-PARACURU-LICITAÇÃO',
-    '147 - L82-PARAIPABA-LICITAÇÃO',
-    '149 - L82-SGA-LICITAÇÃO',
-    '000 - L82-EXTRA ROTA'
+  AND ar.A14_DESC IS NOT NULL
+  AND ar.A14_DESC NOT IN (
+      '999 - L80-INDUSTRIA',
+      '700 - L81 - REMESSA VENDA',
+      '142 - L82-PARACURU-LICITAÇÃO',
+      '147 - L82-PARAIPABA-LICITAÇÃO',
+      '149 - L82-SGA-LICITAÇÃO',
+      '000 - L82-EXTRA ROTA'
 );
 """
+
+# Função para montar o grupo de filtros
+def make_filter_group(group_id, label, values):
+    checkbox_items = "".join(
+        f"<label><input type='checkbox' value='{v}'> {v}</label>" for v in sorted(values)
+    )
+    return f"""
+    <div class="filter-group" id="{group_id}">
+        <label>{label}</label>
+        <input type="text" class="filter-search" placeholder="Buscar {label.lower()}...">
+        <label><input type="checkbox" class="check-all"> Selecionar todos</label>
+        <div class="scrollbox">{checkbox_items}</div>
+    </div>
+    """
 
 @app.route("/")
 def index():
@@ -46,32 +67,29 @@ def index():
         return Response(f"<pre style='color:red'>ERRO AO LER DO BANCO:\n{e}</pre>", mimetype="text/html")
 
     centro = [df.latitude.mean(), df.longitude.mean()]
-    m = folium.Map(location=centro, zoom_start=6, width="100%", height="100%",  tiles="OpenStreetMap")
+    m = folium.Map(location=centro, zoom_start=6, width="100%", height="100%", tiles="OpenStreetMap")
 
     for _, r in df.iterrows():
-        folium.Marker(
-            [r.latitude, r.longitude],
-            popup=(f"<b>ID:</b> {r.A00_ID}<br><b>Cliente:</b> {r.A00_FANTASIA}<br><b>Rota:</b> {r.AREA_DESC}"),
-        ).add_to(m)
+        popup = (
+            f"<b>ID:</b> {r.A00_ID}<br>"
+            f"<b>Cliente:</b> {r.A00_FANTASIA}<br>"
+            f"<b>Rota:</b> {r.AREA_DESC}<br>"
+            f"<b>Vendedor:</b> {r.NOME_VENDEDOR or 'N/A'}<br>"
+            f"<b>Supervisor:</b> {r.SUPERVISOR or 'N/A'}"
+        )
+        folium.Marker([r.latitude, r.longitude], popup=popup).add_to(m)
 
     folium.LayerControl(collapsed=False).add_to(m)
     html = m.get_root().render()
 
-    def make_filter_group(group_id, label, values):
-        checkbox_items = "".join(f"<label><input type='checkbox' value='{v}'> {v}</label>" for v in sorted(values))
-        return f"""
-        <div class="filter-group" id="{group_id}">
-            <label>{label}</label>
-            <input type="text" class="filter-search" placeholder="Buscar {label.lower()}...">
-            <label><input type="checkbox" class="check-all"> Selecionar todos</label>
-            <div class="scrollbox">{checkbox_items}</div>
-        </div>
-        """
+    # Grupos de filtro
+    area_group       = make_filter_group("area-group", "Rota", df["AREA_DESC"].dropna().unique())
+    id_group         = make_filter_group("id-group", "ID", df["A00_ID"].astype(str).unique())
+    name_group       = make_filter_group("name-group", "Cliente", df["A00_FANTASIA"].dropna().unique())
+    vendedor_group   = make_filter_group("vendedor-group", "Vendedor", df["NOME_VENDEDOR"].dropna().unique())
+    supervisor_group = make_filter_group("supervisor-group", "Supervisor", df["SUPERVISOR"].dropna().unique())
 
-    area_group  = make_filter_group("area-group", "Rota", df["AREA_DESC"].unique())
-    id_group    = make_filter_group("id-group", "ID", df["A00_ID"].astype(str).unique())
-    name_group  = make_filter_group("name-group", "Cliente", df["A00_FANTASIA"].unique())
-
+    # HTML extra com filtros e botão flutuante
     overlay = f"""
 <style>
   #filter-toggle {{
@@ -189,6 +207,8 @@ def index():
   {area_group}
   {id_group}
   {name_group}
+  {vendedor_group}
+  {supervisor_group}
   <button id="btn-search" class="btn-buscar">Buscar</button>
   <div class="btn-group">
     <button id="btn-clear" class="btn-clear">Limpar</button>

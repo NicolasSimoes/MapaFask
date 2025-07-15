@@ -21,9 +21,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function filterMarkers() {
-    const areas  = getCheckedValues('area-group');
-    const ids    = getCheckedValues('id-group');
-    const names  = getCheckedValues('name-group');
+    const areas       = getCheckedValues('area-group');
+    const ids         = getCheckedValues('id-group');
+    const names       = getCheckedValues('name-group');
+    const vendedores  = getCheckedValues('vendedor-group');
+    const supervisores = getCheckedValues('supervisor-group');
 
     markers.forEach(marker => {
       let raw = marker.getPopup()?.getContent?.() || "";
@@ -33,8 +35,10 @@ document.addEventListener("DOMContentLoaded", function () {
       const okA = areas.length === 0 || areas.some(a => plain.includes('rota:</b>' + a.replace(/\s+/g, '')));
       const okI = ids.length   === 0 || ids.some(i => plain.includes('id:</b>' + i));
       const okN = names.length === 0 || names.some(n => plain.includes('cliente:</b>' + n.replace(/\s+/g, '')));
+      const okV = vendedores.length === 0 || vendedores.some(v => plain.includes('vendedor:</b>' + v.replace(/\s+/g, '')));
+      const okS = supervisores.length === 0 || supervisores.some(s => plain.includes('supervisor:</b>' + s.replace(/\s+/g, '')));
 
-      if (okA && okI && okN) {
+      if (okA && okI && okN && okV && okS) {
         marker.addTo(map);
       } else {
         map.removeLayer(marker);
@@ -51,7 +55,6 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById('btn-clear').onclick = () => {
     document.querySelectorAll('.scrollbox input:checked').forEach(cb => cb.checked = false);
 
-    // Limpa caixas de busca
     document.querySelectorAll('.filter-search').forEach(input => {
       input.value = '';
       input.dispatchEvent(new Event('input'));
@@ -67,10 +70,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.getElementById('btn-toggle').onclick = () => {
     const ctrl = document.querySelector('.leaflet-control-layers');
-    ctrl.style.display = ctrl.style.display === 'none' ? '' : 'none';
+    if (ctrl) {
+      ctrl.style.display = ctrl.style.display === 'none' ? '' : 'none';
+    }
   };
 
-  // Filtro por texto + rolagem
   document.querySelectorAll('.filter-group').forEach(group => {
     const input = group.querySelector('.filter-search');
     const items = group.querySelectorAll('.scrollbox label');
@@ -93,7 +97,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Selecionar todos
   document.querySelectorAll('.filter-group').forEach(group => {
     const toggle = group.querySelector('.check-all');
     const checks = group.querySelectorAll('.scrollbox input[type="checkbox"]');
